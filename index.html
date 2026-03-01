@@ -23,10 +23,10 @@
     <style>
         body {
             font-family: 'Zen Maru Gothic', sans-serif;
-            background-color: #f0f4f8;
+            background-color: #f4f1ea;
             -webkit-tap-highlight-color: transparent;
             overflow-x: hidden;
-            color: #1e293b;
+            color: #43433e;
             overscroll-behavior-y: none; /* 防止 iOS 橡皮筋效果 */
         }
         
@@ -278,7 +278,7 @@
                     </div>
                     <div class="text-right">
                         <div class="text-xs font-bold bg-sky-100 text-sky-600 px-2 py-1 rounded-full mb-1">
-                            <i class="fas fa-map-marker-alt mr-1"></i>關西
+                            <i class="fas fa-map-marker-alt mr-1"></i>東京
                         </div>
                     </div>
                 </div>
@@ -317,7 +317,7 @@
                                 </div>
                                 <div class="text-right">
                                     <div class="text-xs text-blue-200 font-bold mb-0.5">TO</div>
-                                    <div class="text-xl font-black tracking-wide">KIX</div>
+                                    <div class="text-xl font-black tracking-wide">NRT</div>
                                 </div>
                             </div>
                             
@@ -793,61 +793,42 @@
             });
 
             // 天氣模擬
-// --- 自動抓取大阪天氣 API ---
-            const weatherInfo = ref({ temp: '--', icon: 'fas fa-spinner fa-spin', desc: '載入中...', feel: '--' });
+            const weatherInfo = computed(() => {
+                if(selectedDate.value === 'todo') return { temp: '-', icon: '', desc: '' };
+                const month = parseInt(selectedDate.value.split('-')[1]);
+                let temp = 20;
+                let icon = 'fas fa-sun';
+                let desc = '晴朗';
+                let feelDiff = -2;
 
-            const fetchOsakaWeather = () => {
-                if (selectedDate.value === 'todo') {
-                    weatherInfo.value = { temp: '-', icon: '', desc: '', feel: '-' };
-                    return;
+                if (month === 12 || month <= 2) { 
+                    temp = Math.floor(Math.random() * 8) + 2; 
+                    const conditions = [
+                        { icon: 'fas fa-sun', desc: '晴時多雲' },
+                        { icon: 'fas fa-cloud', desc: '陰天' },
+                        { icon: 'fas fa-snowflake', desc: '小雪' }
+                    ];
+                    const c = conditions[Math.floor(Math.random() * conditions.length)];
+                    icon = c.icon;
+                    desc = c.desc;
+                    feelDiff = -3;
+                } else if (month >= 6 && month <= 9) { 
+                    temp = Math.floor(Math.random() * 10) + 25; 
+                    icon = 'fas fa-sun';
+                    desc = '炎熱';
+                    feelDiff = 3;
+                } else { 
+                    temp = Math.floor(Math.random() * 10) + 15; 
+                    icon = 'fas fa-cloud-sun';
+                    desc = '舒適';
                 }
 
-                const apiDate = selectedDate.value; 
-                
-                // 大阪的經緯度 (34.6937, 135.5023)
-                fetch(`https://api.open-meteo.com/v1/forecast?latitude=34.6937&longitude=135.5023&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=Asia/Tokyo&start_date=${apiDate}&end_date=${apiDate}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.daily && data.daily.time.length > 0) {
-                            const daily = data.daily;
-                            const tempMax = daily.temperature_2m_max[0];
-                            const tempMin = daily.temperature_2m_min[0];
-                            const code = daily.weathercode[0];
-                            
-                            // WMO 天氣代碼映射
-                            const weatherMap = {
-                                0: { icon: 'fas fa-sun', desc: '晴朗' },
-                                1: { icon: 'fas fa-cloud-sun', desc: '晴時多雲' },
-                                2: { icon: 'fas fa-cloud', desc: '多雲' },
-                                3: { icon: 'fas fa-cloud', desc: '陰天' },
-                                45: { icon: 'fas fa-smog', desc: '霧' },
-                                48: { icon: 'fas fa-smog', desc: '霧' },
-                                51: { icon: 'fas fa-cloud-rain', desc: '小雨' },
-                                61: { icon: 'fas fa-cloud-showers-heavy', desc: '雨' },
-                                80: { icon: 'fas fa-cloud-sun-rain', desc: '陣雨' },
-                                95: { icon: 'fas fa-bolt', desc: '雷雨' }
-                            };
-                            
-                            const weather = weatherMap[code] || { icon: 'fas fa-cloud', desc: '未知' };
-                            
-                            weatherInfo.value = {
-                                temp: `${Math.round(tempMin)}~${Math.round(tempMax)}°C`,
-                                icon: weather.icon,
-                                desc: weather.desc,
-                                feel: Math.round((tempMax + tempMin) / 2) // 用平均溫度做為體感近似值
-                            };
-                        }
-                    })
-                    .catch(err => {
-                        console.error('天氣抓取失敗', err);
-                        weatherInfo.value = { temp: 'Error', icon: 'fas fa-exclamation-triangle', desc: '無法取得', feel: '-' };
-                    });
-            };
-
-            // 當選擇日期改變時抓取天氣
-            Vue.watch(selectedDate, () => {
-                fetchOsakaWeather();
-            });
+                return {
+                    temp,
+                    icon,
+                    desc,
+                    feel: temp + feelDiff
+                };
             });
 
             const modalTitle = computed(() => {
@@ -1139,8 +1120,6 @@
 </script>
 </body>
 </html>
-
-
 
 
 
