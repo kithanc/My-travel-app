@@ -3,80 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>關西隨身旅伴 | Kansai 2026</title>
+    <title>2026 關西紀行 | Kansai Family Trip</title>
+    
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500&family=Noto+Serif+TC:wght@500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&family=Noto+Serif+TC:wght@700&display=swap" rel="stylesheet">
+
     <style>
-        /* 大地色系變數定義 */
         :root {
-            --earth-bg: #F2EDE4;      /* 暖米色背景 */
-            --earth-card: #FAF9F6;    /* 淺色和紙卡片 */
-            --earth-brown: #7E6363;   /* 乾枯玫瑰棕 */
-            --earth-deep: #5D5245;    /* 深焙茶色文字 */
-            --earth-accent: #A8907E;  /* 亞麻棕強調色 */
+            --ks-bg: #F5F2ED;
+            --ks-brown: #7E6363;
+            --ks-accent: #B0926A;
+            --ks-deep: #433D3C;
         }
-        body { 
-            font-family: 'Noto Sans TC', sans-serif; 
-            background-color: var(--earth-bg); 
-            color: var(--earth-deep); 
-            letter-spacing: 0.02em;
+        body { font-family: 'Zen Maru Gothic', sans-serif; background-color: var(--ks-bg); color: var(--ks-deep); -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+        h1, h2 { font-family: 'Noto Serif TC', serif; }
+        
+        .app-bg { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-image: url('https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=2070&auto=format&fit=crop'); background-size: cover; background-position: center; z-index: -2; }
+        .app-blur-layer { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(245, 242, 237, 0.5); backdrop-filter: blur(8px); z-index: -1; }
+        #scroll-container { max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 120px; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        .liquid-glass {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.65) 100%);
+            backdrop-filter: blur(20px) saturate(160%);
+            -webkit-backdrop-filter: blur(20px) saturate(160%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 32px 0 rgba(126, 99, 99, 0.1);
+            position: relative;
+            overflow: hidden;
         }
-        h1 { font-family: 'Noto Serif TC', serif; color: var(--earth-deep); }
-        .card { 
-            background: var(--earth-card); 
-            border-radius: 18px; 
-            border: 1px solid #E3D9C6;
-            box-shadow: 0 4px 12px rgba(93, 82, 69, 0.05);
-        }
-        .nav-shadow { box-shadow: 0 -4px 20px rgba(93, 82, 69, 0.08); }
-        .btn-active { color: var(--earth-brown); transform: scale(1.05); }
+
+        .alert-card { background: #FFF3CD; border-left: 5px solid #FFC107; color: #856404; }
+        .flight-card { background: linear-gradient(135deg, #7E6363 0%, #5D5245 100%); color: #F5F2ED; }
+        .bottom-nav { position: fixed; bottom: 25px; left: 15px; right: 15px; z-index: 999; max-width: 450px; margin: 0 auto; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
     </style>
 </head>
 <body>
-    <div id="app" class="max-w-md mx-auto min-h-screen pb-24 relative shadow-inner">
-        
-        <header class="p-7 pt-10">
-            <h1 class="text-2xl font-medium tracking-tight">關西の旅 2026</h1>
-            <p class="text-[11px] opacity-60 mt-1 tracking-[0.2em] uppercase font-light">Osaka · Kyoto · Nara · Kobe</p>
-        </header>
 
-        <main class="px-5 space-y-6">
-            
-            <section v-if="activeTab === 'itinerary'">
-                <div class="card p-5 mb-5 flex items-center justify-between border-l-4 border-l-[#A8907E]">
-                    <div>
-                        <p class="text-[10px] text-stone-400 uppercase tracking-widest mb-1">Forecast · Kyoto</p>
-                        <p class="text-lg font-medium text-stone-700">14°C 晴時多雲</p>
-                    </div>
-                    <div class="text-3xl opacity-80">🌤️</div>
+<div id="app">
+    <div class="app-bg"></div> 
+    <div class="app-blur-layer"></div>
+    
+    <div id="scroll-container">
+        <div class="sticky top-0 z-40 bg-white/80 backdrop-blur-md pt-6 pb-3 shadow-sm rounded-b-[40px]">
+            <div class="px-8 mb-4 flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-stone-800 tracking-tight">關西家族自駕遊</h1>
+                <div class="text-right">
+                    <div class="text-[10px] text-stone-400 font-bold uppercase tracking-widest">Rate</div>
+                    <div class="font-bold text-[#7E6363] text-sm">¥1 ≈ $0.052 HKD</div>
                 </div>
+            </div>
 
-                <h2 class="text-sm font-medium mb-4 pl-1 flex items-center gap-2">
-                    <span class="w-1 h-4 bg-[#7E6363] rounded-full"></span>
-                    今日行程規劃
-                </h2>
-                <div class="space-y-4">
-                    <div v-for="item in schedule" :key="item.time" class="card p-5 transition-all active:bg-stone-50">
-                        <div class="flex gap-4">
-                            <span class="text-[11px] font-mono font-bold text-[#A8907E] pt-1">{{ item.time }}</span>
-                            <div>
-                                <h3 class="font-medium text-stone-800 leading-snug">{{ item.title }}</h3>
-                                <p class="text-xs text-stone-500 mt-2 leading-relaxed">{{ item.desc }}</p>
+            <div class="flex overflow-x-auto no-scrollbar px-6 space-x-3 pb-2">
+                <div @click="selectedDate = 'todo'" class="flex-shrink-0 w-16 h-20 rounded-2xl flex flex-col items-center justify-center transition-all border-2"
+                    :class="selectedDate === 'todo' ? 'bg-[#7E6363] border-[#7E6363] text-white' : 'bg-white/50 border-stone-200 text-stone-400'">
+                    <i class="fas fa-exclamation-triangle text-xl mb-1"></i>
+                    <span class="text-[10px] font-bold">須知</span>
+                </div>
+                <div v-for="day in tripDates" :key="day.date" @click="selectedDate = day.date"
+                    class="flex-shrink-0 w-16 h-20 rounded-2xl flex flex-col items-center justify-center transition-all border-2"
+                    :class="selectedDate === day.date ? 'bg-[#B0926A] border-[#B0926A] text-white' : 'bg-white/50 border-stone-200 text-stone-400'">
+                    <span class="text-[10px] font-bold">{{ day.label }}</span>
+                    <span class="text-xl font-bold">{{ day.date.split('-')[2] }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-5 pt-5">
+            <div v-if="selectedDate === 'todo'" class="space-y-4 animate-fade-in">
+                <div class="alert-card p-5 rounded-3xl shadow-sm">
+                    <h3 class="font-bold mb-2 flex items-center gap-2"><i class="fas fa-car-side"></i> 行李與車輛危機</h3>
+                    <p class="text-sm leading-relaxed">Honda Stepwgn 載 5 人時後車廂幾乎為零。建議於 11/4 利用黑貓宅急便寄送大行李至京都，或升級 10 人車。</p>
+                </div>
+                <div class="liquid-glass p-5 rounded-3xl border border-stone-200">
+                    <h3 class="font-bold text-stone-800 mb-2">🌸 淡路島賞花提醒</h3>
+                    <p class="text-sm text-stone-600">4 月主要是鬱金香、粉蝶花及櫻花。</p>
+                </div>
+            </div>
+
+            <div v-if="selectedDate !== 'todo'" class="space-y-4 animate-fade-in">
+                <div v-for="item in dailyItinerary" :key="item.time">
+                    <div v-if="item.type === 'flight'" class="flight-card rounded-[32px] p-6 shadow-xl">
+                        <div class="flex justify-between items-center mb-4 opacity-80 text-[10px] font-bold tracking-widest">
+                            <span>FLIGHT {{ item.code }}</span>
+                            <span>{{ item.time }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-center px-2">
+                            <div><p class="text-2xl font-bold">{{ item.from }}</p></div>
+                            <div class="flex-1 px-4"><i class="fas fa-plane"></i><div class="border-t border-dashed border-white/30 my-2"></div></div>
+                            <div><p class="text-2xl font-bold">{{ item.to }}</p></div>
+                        </div>
+                    </div>
+
+                    <div v-else class="liquid-glass rounded-[28px] p-5 flex gap-4 border border-white/50">
+                        <div class="flex flex-col items-center pt-1 min-w-[48px]">
+                            <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-lg shadow-md mb-2 bg-[#B0926A]">
+                                <i :class="item.icon"></i>
                             </div>
+                            <span class="text-xs font-bold text-stone-500 font-mono">{{ item.time }}</span>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-stone-800 text-lg">{{ item.location }}</h3>
+                            <p class="text-xs text-stone-400 mt-1 flex items-center gap-1">
+                                <i class="fas fa-info-circle"></i> {{ item.note }}
+                            </p>
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
+        </div>
+    </div>
 
-            <section v-if="activeTab === 'map'" class="space-y-4">
-                <div class="card aspect-[4/5] w-full flex items-center justify-center bg-[#E8E2D6] relative overflow-hidden">
-                    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')] opacity-30"></div>
-                    <p class="text-stone-500 italic font-light">關西地區路線預覽</p>
-                </div>
-                <div class="card p-5">
-                    <h3 class="text-sm font-medium mb-3">重點地標</h3>
-                    <ul class="text-sm space-y-3 opacity-80">
-                        <li class="flex items-center gap-2">🏮 清水寺 (Kyoto)</li>
-                        <li class="flex items-center gap-2">🎡 道頓堀 (Osaka)</li>
-                        <li class="flex items-center gap-2">🦌 奈良
+    <div class="bottom-nav liquid-glass rounded-[32px] border border-white/40 shadow-2xl">
+        <div class="flex justify-around items-center py-2">
+            <button class="flex flex-col items-center text-[#7E6363]"><i class="fas fa-calendar-alt text-xl"></i><span class="text-[8px] font-bold">SCHEDULE</span></button>
+            <button class="flex flex-col items-center text-stone-300"><i class="fas fa-map-marked-alt text-xl"></i><span class="text-[8px] font-bold">MAP</span></button>
+            <button class="flex flex-col items-center text-stone-300"><i class="fas fa-wallet text-xl"></i><span class="text-[8px] font-bold">EXPENSE</span></button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp, ref, computed } = Vue;
+    createApp({
+        setup() {
+            const selectedDate = ref('2026-04-08');
+            const tripDates = [
+                { date: '2026-04-08', label: 'Day 1' },
+                { date: '2026-04-09', label: 'Day 2' },
+                { date: '2026-04-10', label: 'Day 3' },
+                { date: '2026-04-11', label: 'Day 4' },
+                { date: '2026-04-12', label: 'Day 5' },
+                { date: '2026-04-13', label: 'Day 6' },
+                { date: '2026-04-15', label: 'Day 8' },
+            ];
+
+            const allItinerary = {
+                '2026-04-08': [
+                    { type: 'flight', code: 'UO688', time: '14:55', from: 'HKG', to: 'KIX', note: '抵達關西空港' },
+                    { type: 'car', icon: 'fas fa-car', time: '16:00', location: 'Kuma 租車取車', note: 'Honda Stepwgn' },
+                    { type: 'stay', icon: 'fas fa-hotel', time: '18:00', location: '入住大阪民宿', note: '阿倍野區' }
+                ],
+                '2026-04-11': [
+                    { type: 'car', icon: 'fas fa-truck-loading', time: '09:00', location: '寄送行李', note: '黑貓宅急便寄京都' },
+                    { type: 'place', icon: 'fas fa-tree', time: '11:00', location: '淡路島賞花', note: '國營明石海峽公園' },
+                    { type: 'stay', icon: 'fas fa-bed', time: '18:00', location: '入住淡路島', note: 'Grand Nikko' }
+                ],
+                '2026-04-12': [
+                    { type: 'car', icon: 'fas fa-road', time: '09:00', location: '長途駕駛', note: '淡路島 ➡️ 天橋立 (約 2.5 小時)' },
+                    { type: 'stay', icon: 'fas fa-hot-tub', time: '17:30', location: '抵達城崎溫泉', note: '享用晚餐蟹宴' }
+                ],
+                '2026-04-13': [
+                    { type: 'car', icon: 'fas fa-landmark', time: '10:00', location: '前往京都', note: '車程約 3 小時' },
+                    { type: 'stay', icon: 'fas fa-hotel', time: '15:00', location: '入住 Minn 祇園', note: '與寄送行李會合' }
+                ],
+                '2026-04-15': [
+                    { type: 'flight', code: 'UO863', time: '21:30', from: 'KIX', to: 'HKG', note: '16:30 前離開京都前往機場' }
+                ]
+            };
+
+            const dailyItinerary = computed(() => allItinerary[selectedDate.value] || []);
+
+            return { selectedDate, tripDates, dailyItinerary };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
